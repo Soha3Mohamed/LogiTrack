@@ -2,6 +2,7 @@
 using LogiTrack.Utility;
 using LogiTrack.Entities;
 using Microsoft.Identity.Client;
+using LogiTrack.Services;
 
 namespace LogiTrack
 {
@@ -14,125 +15,86 @@ namespace LogiTrack
 
                 DbSeeder.Seed(dbContext);
 
-                #region Get all Employees's names
-                //var employee = (from emp in dbContext.Employees
-
-                //                select emp);
-                //foreach (var item in employee)
-                //{
-                //    Console.WriteLine(item.Name);
-                //}
-
-                #endregion
-
-                #region Get all managers (with Role.Manager )
-                var emps = from emp in dbContext.Employees
-                           where emp.Role == Role.Manager
-                           select emp;
-                foreach (var emp in emps)
+                var service = new CompanyService(dbContext);
+                while (true)
                 {
-                    Console.WriteLine(emp.Id);
-                }
-                #endregion
+                    Console.WriteLine("\n=== Company Service Menu ===");
+                    Console.WriteLine("1. List All Employees");
+                    Console.WriteLine("2. List All Managers");
+                    Console.WriteLine("3. Add a Project");
+                    Console.WriteLine("4. List All Projects");
+                    Console.WriteLine("5. Assign Employees to a Project");
+                    Console.WriteLine("6. Show Employees in a Project");
+                    Console.WriteLine("7. Exit");
+                    Console.Write("Choose an option: ");
+                    var choice = Console.ReadLine();
 
-
-                #region Add a new project to a department
-                //Project project = new Project()
-                //{
-                //    Name = "Project E",
-                //    Description = "Test Project",
-                //    DepartmentId = 2,
-                //    ManagerId = 2,
-                //};
-                //dbContext.Projects.Add(project);
-                //dbContext.SaveChanges();
-                //Console.WriteLine("pppp");
-                #endregion
-
-
-                #region Get all Projects
-                //var projects = (from P in dbContext.Projects
-
-                //                select P);
-                //foreach (var item in projects)
-                //{
-                //    Console.WriteLine(item.Name);
-                //} 
-                #endregion
-
-
-                #region Remove project
-                //var projects = from P in dbContext.Projects
-                //               where P.Description == "Test Project"
-                //               select P;
-
-                //foreach (var project in projects)
-                //{
-                //    Console.WriteLine(project.Name);
-                //    dbContext.Projects.Remove(project);
-                //}
-                //dbContext.SaveChanges();
-                #endregion
-
-                #region Assign employee(s) to a project
-                var project= (from P in dbContext.Projects
-                             where P.Name == "Project A"
-                             select P).FirstOrDefault();
-
-                if (project != null )
-                {
-                    var employees = (from emp in dbContext.Employees
-                                     where emp.Age <= 28
-                                     select emp).ToList() ;
-                    foreach (var emp in employees)
+                    switch (choice)
                     {
-                        bool IsAssigned = dbContext.EmployeeProjects.Any(EP=>EP.EmployeeId == emp.Id && EP.ProjectId == project.Id);
+                        case "1":
+                            var employees = service.GetAllEmployees();
+                            foreach (var emp in employees)
+                                Console.WriteLine($"{emp.Id}: {emp.Name} - {emp.Role}");
+                            break;
 
-                        if(!IsAssigned)
-                        {
-                            var assignedProject = new EmployeeProject
-                            {
-                                EmployeeId = emp.Id,
-                                ProjectId = project.Id,
-                                AssignedAt = DateTime.Now,
-                            };
+                        case "2":
+                            var managers = service.GetAllManagers();
+                            foreach (var mgr in managers)
+                                Console.WriteLine($"{mgr.Id}: {mgr.Name}");
+                            break;
 
-                            dbContext.EmployeeProjects.Add(assignedProject);
-                        }
+                        case "3":
+                            Console.Write("Enter project name: ");
+                            var name = Console.ReadLine();
+                            Console.Write("Enter description: ");
+                            var desc = Console.ReadLine();
+                            Console.Write("Enter department ID: ");
+                            var deptId = int.Parse(Console.ReadLine() ?? "0");
+                            Console.Write("Enter manager ID: ");
+                            var mgrId = int.Parse(Console.ReadLine() ?? "0");
 
-                    }
-                    dbContext.SaveChanges();
-                }
-                #endregion
+                            if (service.AddProject(name, desc, deptId, mgrId, out var error))
+                                Console.WriteLine("Project added.");
+                            else
+                                Console.WriteLine($"Error: {error}");
+                            break;
 
-                #region Change role of an employee in a project
-                //var employees = (from emp in dbContext.Employees
-                //                where emp.Name == "Manal Ali"
-                //                select emp).FirstOrDefault();
+                        case "4":
+                            var projects = service.GetAllProjects();
+                            foreach (var p in projects)
+                                Console.WriteLine($"{p.Id}: {p.Name} - {p.Description}");
+                            break;
 
-                //employees.Role= Role.Manager;
-                //dbContext.SaveChanges();
-                #endregion
+                        case "5":
+                            Console.Write("Enter project name: ");
+                            var projName = Console.ReadLine();
 
-                #region List all employees in a department/project
+                            bool success = service.AssignEmployeesToProject(
+                                projName,
+                                e => e.Age >=28,
+                                out var assignError
+                            );
 
-                var hrDepartment = dbContext.Departments
-                                            .FirstOrDefault(d => d.Name == "HR");
+                            Console.WriteLine(success ? "Employees assigned." : $"Error: {assignError}");
+                            break;
 
-                if (hrDepartment != null)
-                {
-                    // Explicitly load the related Employees collection
-                    dbContext.Entry(hrDepartment)
-                             .Collection(d => d.Employees)
-                             .Load();
+                        case "6":
+                            Console.Write("Enter project name: ");
+                            var projForList = Console.ReadLine();
+                            var projectEmployees = service.GetAllEmployeesInProject(projForList);
+                            foreach (var emp in projectEmployees)
+                                Console.WriteLine($"{emp.Id}: {emp.Name}");
+                            break;
 
+                        case "7":
+                            return;
 
-                    foreach (var emp in hrDepartment.Employees)
-                    {
-                        Console.WriteLine(emp.Name);
+                        default:
+                            Console.WriteLine("Invalid option.");
+                            break;
                     }
 
-                    #endregion
+
                 }
             }
         }
