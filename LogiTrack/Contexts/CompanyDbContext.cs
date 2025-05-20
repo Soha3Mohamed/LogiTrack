@@ -12,7 +12,7 @@ namespace LogiTrack.Contexts
     {
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer("Data Source=LAPTOP-7A6I7DSO\\SQL2022;Integrated Security=True;Encrypt=False;Trust Server Certificate=False;");
+            optionsBuilder.UseSqlServer("Data Source=LAPTOP-7A6I7DSO\\SQL2022;Database = LTDatabase ; Integrated Security=True;Encrypt=False;Trust Server Certificate=False;");
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -25,16 +25,34 @@ namespace LogiTrack.Contexts
             modelBuilder.Entity<EmployeeProject>()
                         .HasOne(E => E.Employee)
                         .WithMany(Ep => Ep.EmployeeProjects)
-                        .HasForeignKey(Ep => Ep.EmployeeId);
+                        .HasForeignKey(Ep => Ep.EmployeeId)
+                        .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<EmployeeProject>()
                         .HasOne(P => P.Project)
                         .WithMany(Ep => Ep.EmployeeProjects)
-                        .HasForeignKey(Ep => Ep.ProjectId); 
+                        .HasForeignKey(Ep => Ep.ProjectId)
+                        .OnDelete(DeleteBehavior.NoAction);
             #endregion
 
 
+            modelBuilder.Entity<Project>()
+                        .HasOne(p => p.Manager)
+                        .WithMany()
+                        .HasForeignKey(p => p.ManagerId)
+                        .OnDelete(DeleteBehavior.Restrict);
+                     
+            
             base.OnModelCreating(modelBuilder);
         }
+
+
+        public DbSet<Employee> Employees { get; set; }
+        public DbSet<Department> Departments { get; set; }
+
+        public DbSet<Project> Projects { get; set; }
+
+        public DbSet<EmployeeProject> EmployeeProjects { get; set; }
+
     }
 }
